@@ -8,20 +8,18 @@ import com.comedyhub.prot.dto.UserDtoResponse;
 import com.comedyhub.prot.model.User;
 
 public class UserMapper {
+
     public static User toEntity(UserDtoCreate dto) {
 		User user = new User();
 		user.setPassword(dto.getPassword());
 		user.setUsername(dto.getUsername().toUpperCase());
-		
 		return user;
 	}
 	
 	public static User toEntity(UserDtoResponse dto) {
 		User user = new User();
-		user.setPassword(dto.getPassword());
 		user.setUsername(dto.getUsername().toUpperCase());
 		user.setId(dto.getId());
-
 		return user;
 	}
 	
@@ -30,7 +28,6 @@ public class UserMapper {
 		dto.setId(user.getId());
 		dto.setPassword(user.getPassword());
 		dto.setUsername(user.getUsername().toUpperCase());
-
 		return dto;
 	}
 
