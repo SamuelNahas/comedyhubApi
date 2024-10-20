@@ -1,48 +1,75 @@
 package com.comedyhub.prot.service;
 
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import com.comedyhub.prot.dto.UserDtoCreate;
+import com.comedyhub.prot.dto.UserDtoResponse;
+import com.comedyhub.prot.dto.mapper.UserMapper;
 import com.comedyhub.prot.model.User;
 import com.comedyhub.prot.repository.UserRepository;
-
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
-public class UserService {
+public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
-    public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
+    @Autowired
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, UserMapper userMapper) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userMapper = userMapper;
     }
 
-    public User createUser(UserDtoCreate userDTO) {
+    public UserDtoResponse createUser(UserDtoCreate userDTO) {
         User user = new User();
         user.setUsername(userDTO.getUsername());
         user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-        // A lógica para seguidores pode ser implementada mais tarde
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        return userMapper.toDTO(savedUser);
     }
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<UserDtoResponse> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        return users.stream().map(userMapper::toDTO).collect(Collectors.toList());
     }
 
-    public User getUserById(Long id) {
-        return userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+    public UserDtoResponse getUserById(Long id) {
+        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        return userMapper.toDTO(user);
     }
 
-    public User authenticateUser(String username, String password) {
-        // Implement authentication logic here
-        // For example:
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username);
-        if (user != null && user.getPassword().equals(password)) {
-            return user;
+        if (user == null) {
+            throw new UsernameNotFoundException("User not found: " + username);
         }
-        return null;
+        return new org.springframework.security.core.userdetails.User(
+                user.getUsername(),
+                user.getPassword(),
+                new ArrayList<>()
+        );
     }
+
+    public boolean existsByUsername(String username) {
+        return userRepository.findByUsername(username) != null;
+    }
+
+	public UserDtoResponse getUserByUsername(String username) {
+		User user = userRepository.findByUsername(username);
+		if (user == null) {
+			throw new RuntimeException("User not found");
+		}
+		return userMapper.toDTO(user);
+	}
+	
 }

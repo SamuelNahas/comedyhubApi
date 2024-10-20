@@ -32,6 +32,9 @@ public class User {
 
     @ManyToMany
     private List<User> followers;
+    
+    @ManyToMany
+    private List<User> following;
 
     public Long getId() {
         return id;
