@@ -34,4 +34,11 @@ public class UserController {
     public ResponseEntity<UserDtoResponse> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
+    
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/{username}")
+    public ResponseEntity<UserDtoResponse> getUserByUsername(@PathVariable String username) {
+        return ResponseEntity.ok(userService.getUserByUsername(username));
+    }
+    
 }

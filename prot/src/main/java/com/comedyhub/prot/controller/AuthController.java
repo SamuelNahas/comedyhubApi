@@ -6,6 +6,7 @@ import java.time.temporal.ChronoUnit;
 import javax.naming.AuthenticationException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -45,29 +46,25 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
-    if (!userService.existsByUsername(loginRequest.getUsername())) {
-        return ResponseEntity.badRequest().body("User not found");
-    }
-    try {
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) throws AuthenticationException {
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
-        );
+		    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+		
+		String token = createToken(authentication.getName());
+		
+		return ResponseEntity.ok(new TokenResponse(token));
+    }
 
+    private String createToken(String username) {
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
             .issuer("self")
             .issuedAt(now)
             .expiresAt(now.plus(10, ChronoUnit.DAYS))
-            .subject(authentication.getName())
+            .subject(username)
             .build();
 
-        String token = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-
-        return ResponseEntity.ok(new TokenResponse(token));
-    } catch (AuthenticationException e) {
-        return ResponseEntity.badRequest().body("Invalid username or password");
+        return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
     }
-}
 
 }

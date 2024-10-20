@@ -8,21 +8,25 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.comedyhub.prot.dto.UserDtoCreate;
 import com.comedyhub.prot.dto.UserDtoResponse;
+import com.comedyhub.prot.dto.mapper.UserMapper;
 import com.comedyhub.prot.model.User;
 import com.comedyhub.prot.repository.UserRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
     @Autowired
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, UserMapper userMapper) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userMapper = userMapper;
     }
 
     public UserDtoResponse createUser(UserDtoCreate userDTO) {
@@ -30,22 +34,17 @@ public class UserService implements UserDetailsService {
         user.setUsername(userDTO.getUsername());
         user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         User savedUser = userRepository.save(user);
-        return convertToDto(savedUser);
+        return userMapper.toDTO(savedUser);
     }
 
     public List<UserDtoResponse> getAllUsers() {
         List<User> users = userRepository.findAll();
-        List<UserDtoResponse> userDtos = new ArrayList<>();
-        for (User user : users) {
-            userDtos.add(convertToDto(user));
-        }
-        return userDtos;
+        return users.stream().map(userMapper::toDTO).collect(Collectors.toList());
     }
 
     public UserDtoResponse getUserById(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        return convertToDto(user);
+        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        return userMapper.toDTO(user);
     }
 
     @Override
@@ -65,11 +64,12 @@ public class UserService implements UserDetailsService {
         return userRepository.findByUsername(username) != null;
     }
 
-    private UserDtoResponse convertToDto(User user) {
-        UserDtoResponse dto = new UserDtoResponse();
-        dto.setId(user.getId());
-        dto.setUsername(user.getUsername());
-        // Don't set the password in the DTO for security reasons
-        return dto;
-    }
+	public UserDtoResponse getUserByUsername(String username) {
+		User user = userRepository.findByUsername(username);
+		if (user == null) {
+			throw new RuntimeException("User not found");
+		}
+		return userMapper.toDTO(user);
+	}
+	
 }
